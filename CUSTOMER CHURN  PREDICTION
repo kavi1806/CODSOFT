@@ -1,0 +1,80 @@
+# Import necessary libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report
+
+# Load your dataset
+df = pd.read_csv('customer_churn_data.csv')
+
+# Separate features and target variable
+X = df.drop('Churn', axis=1)
+y = df['Churn']
+
+# Define categorical and numerical features
+cat_features = ['Gender']  # Assuming 'Gender' is categorical
+num_features = ['Usage', 'Age', 'SubscriptionDuration']
+
+# Preprocessing pipelines for numeric and categorical data
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder(drop='first'))  # drop='first' to avoid multicollinearity
+])
+
+# Combine preprocessing steps
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, num_features),
+        ('cat', categorical_transformer, cat_features)
+    ])
+
+# Define classifiers
+classifiers = {
+    'Logistic Regression': LogisticRegression(max_iter=1000),
+    'Random Forest': RandomForestClassifier(random_state=42),
+    'Gradient Boosting': GradientBoostingClassifier(random_state=42)
+}
+
+# Train and evaluate models
+for clf_name, clf in classifiers.items():
+    print(f"Training {clf_name}...")
+    
+    # Create a pipeline with preprocessing and classifier
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                               ('classifier', clf)])
+    
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Fit the model
+    pipeline.fit(X_train, y_train)
+    
+    # Predictions
+    y_pred = pipeline.predict(X_test)
+    
+    # Evaluate predictions
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    roc_auc = roc_auc_score(y_test, y_pred)
+    
+    print(f"\n{clf_name} Metrics:")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1-score: {f1:.4f}")
+    print(f"ROC AUC: {roc_auc:.4f}")
+    
+    # Classification report
+    print(f"\nClassification Report for {clf_name}:")
+    print(classification_report(y_test, y_pred))
+
+    print("="*60)
